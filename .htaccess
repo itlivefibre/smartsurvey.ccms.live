@@ -1,0 +1,29 @@
+# Enable mod_rewrite for URL rewriting
+RewriteEngine On
+
+# Force HTTPS (if your site uses HTTPS)
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Rewrite all requests to index.html (Nuxt routes handling)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]
+
+# CORS (cross-origin) configuration - allow your domain
+Header set Access-Control-Allow-Origin "https://smartsurvey.ccms.live"
+Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+
+# Redirect www to non-www (if you prefer non-www URLs)
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+# Custom error pages
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html
+
+# Cache headers for static files (e.g., images, CSS, JS)
+<FilesMatch "\.(jpg|jpeg|png|gif|svg|js|css|woff|woff2|tff|eot|otf)$">
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</FilesMatch>

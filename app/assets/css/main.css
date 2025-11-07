@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* NProgress custom styles */
+#nprogress .bar {
+	background: red !important; /* teal-500 */
+	height: 3px !important; /* thicker line */
+}
+
+#nprogress .spinner-icon {
+	border-top-color: #14b8a6 !important;
+	border-left-color: #14b8a6 !important;
+}
+
+/* Survey Page CSS */
+.custom-pagination button,
+.custom-pagination a,
+.custom-pagination li {
+	cursor: pointer;
+}
+
+/* Compact accordion padding overrides */
+.compact-accordion .p-4,
+.compact-accordion .px-4,
+.compact-accordion .py-4 {
+	/* padding-left: 0px !important; */
+	/* padding-right: 0px !important; */
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+}
