@@ -3,28 +3,47 @@
 
 /* NProgress custom styles */
 #nprogress .bar {
-	background: red !important; /* teal-500 */
-	height: 3px !important; /* thicker line */
+  background: red !important; /* teal-500 */
+  height: 3px !important; /* thicker line */
 }
 
 #nprogress .spinner-icon {
-	border-top-color: #14b8a6 !important;
-	border-left-color: #14b8a6 !important;
+  border-top-color: #14b8a6 !important;
+  border-left-color: #14b8a6 !important;
 }
 
 /* Survey Page CSS */
 .custom-pagination button,
 .custom-pagination a,
 .custom-pagination li {
-	cursor: pointer;
+  cursor: pointer;
 }
 
 /* Compact accordion padding overrides */
 .compact-accordion .p-4,
 .compact-accordion .px-4,
 .compact-accordion .py-4 {
-	/* padding-left: 0px !important; */
-	/* padding-right: 0px !important; */
-	padding-top: 0 !important;
-	padding-bottom: 0 !important;
+  /* padding-left: 0px !important; */
+  /* padding-right: 0px !important; */
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure the chart container transitions smoothly */
+.chart-container {
+  overflow: hidden; /* Hide overflowing content */
+  transition: max-height 0.5s ease-in-out, padding 0.3s ease;
+  max-height: 1000px; /* Default max height */
+  padding: 0; /* Initially set padding to zero */
+}
+
+/* If the chart is collapsed (showTable = true), reduce the max-height to 0 */
+.chart-container.collapsed {
+  max-height: 0;
+  padding: 0; /* Optional: Remove padding to collapse the space */
+}
+
+/* Smooth transition for chart content */
+.apexcharts-canvas {
+  transition: all 0.3s ease;
 }

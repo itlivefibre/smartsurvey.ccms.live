@@ -16,6 +16,29 @@
     <UCard class="border hover:shadow-md transition-shadow duration-200">
       <!-- Table Header with search + page size -->
       <div class="flex justify-between items-center mb-3 space-x-4">
+        <!-- Project Filter -->
+        <div class="flex-1" v-show="role == '3'">
+          <UFormField class="w-full">
+            <USelect
+              v-model="projectFilter"
+              :items="projectOptions"
+              placeholder="All Projects"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+
+        <!-- Role Filter -->
+        <div class="flex-1">
+          <UFormField class="w-full">
+            <USelect
+              v-model="roleFilter"
+              :items="roleOptions"
+              placeholder="All Roles"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
         <!-- Search -->
         <div class="flex-1">
           <UInput
@@ -26,37 +49,15 @@
           />
         </div>
 
-        <!-- Role Filter -->
-        <div class="flex-1">
-          <UFormField class="w-full">
-            <select
-              v-model.number="roleFilter"
-              class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
-            >
-              <option :value="0">All Roles</option>
-              <option
-                v-for="role in roles"
-                :key="role.value"
-                :value="role.value"
-              >
-                {{ role.text }}
-              </option>
-            </select>
-          </UFormField>
-        </div>
-
         <!-- Page size select -->
         <div class="flex items-center gap-2 text-sm text-gray-700">
-          <span>Show</span>
-          <select
-            v-model.number="pageSize"
-            class="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400"
-          >
-            <option v-for="size in pageSizeOptions" :key="size" :value="size">
-              {{ size }}
-            </option>
-          </select>
-          <span>entries</span>
+          <USelect
+            v-model="pageSize"
+            :items="
+              pageSizeOptions.map((s) => ({ label: s + ' entries', value: s }))
+            "
+            class="w-32"
+          />
         </div>
       </div>
 
@@ -185,10 +186,6 @@
                 :error="errors.role"
                 class="w-full"
               >
-                <!-- <select
-                  v-model.number="selectedUser.role"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
-                > -->
                 <select
                   v-model.number="selectedUser.role"
                   :disabled="!isAddMode"
@@ -281,14 +278,16 @@ const tempPassword = ref(""); // For entering password when adding or updating u
 const loading = ref(true);
 const searchTerm = ref("");
 const pageSizeOptions = [5, 10, 20, 50, 100];
+const projects = ref([]);
+const projectFilter = ref(0); // Added filter for projects
 
-const accesskey = localStorage.getItem("access_token") || "20250929133158";
-// const availableOptions = Array.from({ length: 201 }, (_, index) => ({
-//   value: index + 1,
-//   label: `Ward ${index + 1}`,
-// })); // Available wards as objects for USelectMenu
+const accesskey = localStorage.getItem("access_token");
+
 const availableOptions = Array.from({ length: 201 }, (_, index) => index);
 const selectedItems = ref<number[]>([]);
+
+const user = JSON.parse(localStorage.getItem("user"));
+const role = user?.role;
 
 // Selected user for editing or adding
 const selectedUser = ref<any>({
@@ -351,6 +350,7 @@ type User = {
 };
 const data = ref<User[]>([]);
 const roles = ref<{ text: string; value: number }[]>([]);
+// console.log("Users Data:", data.value);
 
 const supervisors = ref<any[]>([]);
 const supervisorMap = ref<Record<string | number, string>>({});
@@ -368,15 +368,22 @@ const filteredData = computed(() => {
       ["name", "email", "username"].some((key) =>
         String(user[key] || "")
           .toLowerCase()
-          .includes(searchTerm.value.toLowerCase())
-      )
+          .includes(searchTerm.value.toLowerCase()),
+      ),
     );
   }
 
   // Filter by role if selected (>0)
   if (roleFilter.value && roleFilter.value !== 0) {
     result = result.filter(
-      (user) => Number(user.role) === Number(roleFilter.value)
+      (user) => Number(user.role) === Number(roleFilter.value),
+    );
+  }
+
+  // Filter by selected project if any
+  if (projectFilter.value !== 0) {
+    result = result.filter(
+      (user) => Number(user.project_id) === Number(projectFilter.value),
     );
   }
 
@@ -384,7 +391,7 @@ const filteredData = computed(() => {
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredData.value.length / pageSize.value))
+  Math.max(1, Math.ceil(filteredData.value.length / pageSize.value)),
 );
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
@@ -433,9 +440,9 @@ const columns: any[] = [
                     class:
                       "bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full border border-emerald-200",
                   },
-                  String(ward)
-                )
-              )
+                  String(ward),
+                ),
+              ),
             )
           : null,
 
@@ -444,7 +451,7 @@ const columns: any[] = [
           ? h(
               "div",
               { class: "text-xs text-gray-500 mt-1 italic" },
-              `Supervisor: ${supervisorName}`
+              `Supervisor: ${supervisorName}`,
             )
           : null,
       ]);
@@ -459,7 +466,7 @@ const columns: any[] = [
     header: "Role",
     cell: ({ row }: any) => {
       const role = roles.value.find(
-        (r) => r.value === Number(row.original.role)
+        (r) => r.value === Number(row.original.role),
       );
       return role ? role.text : String(row.original.role);
     },
@@ -483,7 +490,7 @@ const columns: any[] = [
             class: "text-blue-500 cursor-pointer hover:underline",
             onClick: () => openModal(row.original),
           },
-          "Edit"
+          "Edit",
         ),
         h(
           "button",
@@ -491,14 +498,14 @@ const columns: any[] = [
             class: "text-red-500 cursor-pointer hover:underline",
             onClick: () => deleteUser(row.original.id),
           },
-          "Delete"
+          "Delete",
         ),
       ]);
     },
   },
 ];
 
-watch([searchTerm, roleFilter, pageSize], () => {
+watch([searchTerm, roleFilter, projectFilter, pageSize], () => {
   currentPage.value = 1;
 });
 
@@ -525,7 +532,7 @@ watch(
       delete selectedUser.value.wards;
       selectedItems.value = [];
     }
-  }
+  },
 );
 
 // Computed for USelect items in { value, label } format
@@ -533,14 +540,14 @@ const supervisorOptions = computed(() =>
   supervisors.value.map((sup) => ({
     value: sup.id,
     label: sup.name || sup.username,
-  }))
+  })),
 );
 
 const fetchUsers = async () => {
   try {
     loading.value = true;
 
-    const [usersRes, supervisorsRes] = await Promise.all([
+    const [usersRes, supervisorsRes, projectsRes] = await Promise.all([
       $fetch("https://ayodhya.water.live/api/surveyNew.php?action=users", {
         method: "POST",
         body: { accesskey },
@@ -550,9 +557,18 @@ const fetchUsers = async () => {
         {
           method: "POST",
           body: { accesskey },
-        }
+        },
+      ),
+      $fetch(
+        "https://ayodhya.water.live/api/surveyNew.php?action=get_common_dashboard_complains",
+        {
+          method: "POST",
+          body: { accesskey },
+        },
       ),
     ]);
+    // console.log("usersRes", usersRes);
+    // console.log("projects", projects);
 
     if (usersRes && usersRes.result) {
       data.value = usersRes.result.users || [];
@@ -567,6 +583,9 @@ const fetchUsers = async () => {
         map[sup.id] = sup.name || sup.username;
       });
       supervisorMap.value = map;
+    }
+    if (projectsRes && projectsRes.result.complaint_comon_list) {
+      projects.value = projectsRes?.result?.complaint_comon_list || [];
     }
   } catch (error) {
     console.error("Failed to fetch data:", error);
@@ -662,6 +681,88 @@ function validateUserForm() {
 }
 
 // Save user function (Add/Update)
+// async function saveUser() {
+//   if (!validateUserForm()) {
+//     toast.add({
+//       title: "Please fix validation errors before saving.",
+//       color: "red",
+//     });
+//     return;
+//   }
+
+//   try {
+//     const payload: any = { ...selectedUser.value };
+
+//     // Ensure role/status are numbers
+//     payload.role = Number(payload.role);
+//     payload.status = Number(payload.status);
+//     if (payload.role === 2) {
+//       // Extract only the numeric values
+//       const wardIds = selectedItems.value.map((item: any) =>
+//         typeof item === "object" ? item.value : item,
+//       );
+//       // Convert to required string format
+//       payload.wards = `[${wardIds.join(",")}]`;
+//     } else {
+//       payload.wards = "";
+//     }
+
+//     // Handle supervisor_id for electricians (role = 5)
+//     if (payload.role === 5) {
+//       payload.supervisor_id = payload.supervisor_id ?? "";
+//     } else {
+//       payload.supervisor_id = "";
+//     }
+
+//     // Handle password
+//     if (isAddMode.value) {
+//       if (!tempPassword.value.trim()) {
+//         toast.add({
+//           title: "Please enter a password for new user.",
+//           color: "red",
+//         });
+//         return;
+//       }
+//       payload.password = tempPassword.value;
+//     } else if (tempPassword.value.trim()) {
+//       payload.password = tempPassword.value;
+//     } else {
+//       delete payload.password;
+//     }
+
+//     const action = isAddMode.value ? "user-insert" : "user-update";
+
+//     await $fetch(
+//       `https://ayodhya.water.live/api/surveyNew.php?action=${action}`,
+//       {
+//         method: "POST",
+//         body: payload,
+//       },
+//     );
+//     if (res?.error === 1) {
+//       throw new Error(res.message || "Operation failed");
+//     }
+
+//     toast.add({
+//       title: isAddMode.value
+//         ? "User added successfully"
+//         : "User updated successfully",
+//       color: "green",
+//     });
+
+//     // ✅ Refresh list from backend so we get correct IDs and data
+//     await fetchUsers();
+
+//     showModal.value = false;
+//   } catch (error) {
+//     console.error("Failed to save user:", error);
+//     toast.add({
+//       title: "Something went wrong. Please try again.",
+//       color: "red",
+//     });
+//   }
+// }
+
 async function saveUser() {
   if (!validateUserForm()) {
     toast.add({
@@ -674,29 +775,20 @@ async function saveUser() {
   try {
     const payload: any = { ...selectedUser.value };
 
-    // Ensure role/status are numbers
     payload.role = Number(payload.role);
     payload.status = Number(payload.status);
 
-    // Handle wards based on role
-    // if (payload.role === 2) {
-    //   // payload.wards = JSON.stringify(selectedItems.value);
-    //    payload.wards = `[${selectedItems.value.join(",")}]`;
-    // } else {
-    //   payload.wards = "";
-    // }
+    // Handle wards
     if (payload.role === 2) {
-      // Extract only the numeric values
       const wardIds = selectedItems.value.map((item: any) =>
-        typeof item === "object" ? item.value : item
+        typeof item === "object" ? item.value : item,
       );
-      // Convert to required string format
       payload.wards = `[${wardIds.join(",")}]`;
     } else {
       payload.wards = "";
     }
 
-    // Handle supervisor_id for electricians (role = 5)
+    // Handle supervisor
     if (payload.role === 5) {
       payload.supervisor_id = payload.supervisor_id ?? "";
     } else {
@@ -721,14 +813,25 @@ async function saveUser() {
 
     const action = isAddMode.value ? "user-insert" : "user-update";
 
-    await $fetch(
+    // ✅ STORE RESPONSE
+    const res: any = await $fetch(
       `https://ayodhya.water.live/api/surveyNew.php?action=${action}`,
       {
         method: "POST",
         body: payload,
-      }
+      },
     );
 
+    // ✅ HANDLE API ERROR
+    if (res?.error === 1) {
+      toast.add({
+        title: res.message || "Operation failed",
+        color: "red",
+      });
+      return;
+    }
+
+    // ✅ SUCCESS
     toast.add({
       title: isAddMode.value
         ? "User added successfully"
@@ -736,32 +839,13 @@ async function saveUser() {
       color: "green",
     });
 
-    // ✅ Refresh list from backend so we get correct IDs and data
     await fetchUsers();
-    // Update local data
-    if (isAddMode.value) {
-      // const newId = Date.now();
-      data.value.push({
-        ...payload,
-        // id: newId,
-      });
-    } else {
-      const index = data.value.findIndex(
-        (user) => Number(user.id) === Number(payload.id)
-      );
-      if (index !== -1) {
-        data.value[index] = {
-          ...data.value[index],
-          ...payload,
-        };
-      }
-    }
-
     showModal.value = false;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to save user:", error);
+
     toast.add({
-      title: "Something went wrong. Please try again.",
+      title: error?.message || "Something went wrong. Please try again.",
       color: "red",
     });
   }
@@ -778,7 +862,7 @@ async function deleteUser(userId: number) {
       {
         method: "POST",
         body: { accesskey, id: userId },
-      }
+      },
     );
     await fetchUsers(); // Refresh list after deletion
     toast.add({ title: "User deleted successfully.", color: "green" });
@@ -790,6 +874,22 @@ async function deleteUser(userId: number) {
     });
   }
 }
+
+const projectOptions = computed(() => [
+  { label: "All Projects", value: 0 },
+  ...projects.value.map((p: any) => ({
+    label: p.project_name,
+    value: Number(p.project_id),
+  })),
+]);
+
+const roleOptions = computed(() => [
+  { label: "All Roles", value: 0 },
+  ...roles.value.map((r) => ({
+    label: r.text,
+    value: Number(r.value),
+  })),
+]);
 </script>
 
 <style scoped>

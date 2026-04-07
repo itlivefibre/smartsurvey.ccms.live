@@ -40,11 +40,13 @@ import { ref } from "vue";
 export const accessToken = ref<string | null>(null);
 export const currentUser = ref<any>(null);
 
-export function setToken(token: string, user: any) {
+export function setToken(token: string, user: any,das_url:string,sur_url:string) {
 	accessToken.value = token;
 	currentUser.value = user;
 	localStorage.setItem("access_token", token);
 	localStorage.setItem("user", JSON.stringify(user));
+	localStorage.setItem('dashboard_url',JSON.stringify(das_url))
+	localStorage.setItem('survey_url',JSON.stringify(sur_url))
 }
 
 export function clearToken() {

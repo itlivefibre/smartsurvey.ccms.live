@@ -18,11 +18,14 @@ export default defineNuxtConfig({
 		// public: {
 		// 	apiBase: process.env.NUXT_PUBLIC_API_BASE,
 		// },
-		runtimeConfig: {
-			public: {
-				apiBase: process.env.NUXT_PUBLIC_API_BASE || "https://ayodhya.water.live/api",
-			},
-		},
+		// runtimeConfig: {
+		// 	public: {
+		// 		apiBase: process.env.NUXT_PUBLIC_API_BASE || "https://ayodhya.water.live/api",
+		// 	},
+		// },
+		 public: {
+      apiBase: "https://ayodhya.water.live/api"
+    }
 	},
 	colorMode: {
 		preference: "light", // default

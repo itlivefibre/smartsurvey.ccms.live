@@ -175,47 +175,126 @@
           </div>
         </UFormGroup>
 
-        <div v-if="excelComplaints.length" class="mt-4">
-          <p class="text-sm text-gray-600 mb-2">
-            Preview complaints from Excel:
-          </p>
-          <ul
-            class="list-disc list-inside text-sm text-gray-700 max-h-40 overflow-y-auto"
+        <div v-if="uploadedData.length" class="mt-6">
+          <!-- Section Heading -->
+          <h2
+            class="text-2xl font-semibold text-gray-800 mb-4 flex items-center gap-3"
           >
-            <li v-for="(c, i) in excelComplaints" :key="i">
-              {{ c.ref_no }} — Complaint Name {{ c.name }} — Mobile No.
-              {{ c.mobile_no }} — Ward {{ c.ward_no }} — Electrician
-              {{ c.electrician }} Pole No — {{ c.pole_no }}
-            </li>
-          </ul>
-          <UButton
-            @click="submitExcel"
-            color="teal"
-            class="mt-4 px-6 py-2 text-white bg-teal-500 cursor-pointer"
+            Preview Complaints from Excel
+            <UBadge color="gray" variant="soft" v-if="uploadedFileName">
+              {{ uploadedFileName }}
+            </UBadge>
+          </h2>
+
+          <!-- Display total, valid, and invalid counts -->
+          <div class="flex justify-between mb-4 text-gray-600">
+            <div class="text-sm font-medium">
+              Total Complaints: {{ totalCount }}
+            </div>
+            <div class="text-sm font-medium">
+              Valid Complaints: {{ validCount }}
+            </div>
+            <div class="text-sm font-medium">
+              Invalid Complaints: {{ invalidCount }}
+            </div>
+          </div>
+
+          <!-- Validation Results Table -->
+          <div
+            v-if="uploadedData.length"
+            class="overflow-x-auto bg-white shadow-md rounded-lg"
           >
-            Submit Excel Complaints
-          </UButton>
+            <!-- Table -->
+            <table
+              class="min-w-full table-auto border-collapse border border-gray-300"
+            >
+              <thead class="bg-teal-500 text-white">
+                <tr>
+                  <th class="px-4 py-2 text-left">Ref No</th>
+                  <th class="px-4 py-2 text-left">Name</th>
+                  <th class="px-4 py-2 text-left">Reference By</th>
+                  <th class="px-4 py-2 text-left">Mobile No</th>
+                  <th class="px-4 py-2 text-left">Ward No</th>
+                  <th class="px-4 py-2 text-left">Address</th>
+                  <th class="px-4 py-2 text-left">Electrician</th>
+                  <th class="px-4 py-2 text-left">Pole No</th>
+                  <th class="px-4 py-2 text-left">Complaint At</th>
+                  <th class="px-4 py-2 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, index) in uploadedData"
+                  :key="index"
+                  class="hover:bg-gray-100"
+                >
+                  <td class="px-4 py-2">{{ row.ref_no }}</td>
+                  <td class="px-4 py-2">{{ row.name }}</td>
+                  <td class="px-4 py-2">{{ row.reference_by }}</td>
+                  <td class="px-4 py-2">{{ row.mobile_no }}</td>
+                  <td class="px-4 py-2">{{ row.ward_no }}</td>
+                  <td class="px-4 py-2">{{ row.address }}</td>
+                  <td class="px-4 py-2">{{ row.electrician }}</td>
+                  <td class="px-4 py-2">{{ row.pole_no }}</td>
+                  <td class="px-4 py-2">{{ row.complaint_at }}</td>
+                  <td
+                    class="px-4 py-2"
+                    :class="{
+                      'text-green-500': row.isValid,
+                      'text-red-500': !row.isValid,
+                    }"
+                  >
+                    {{
+                      row.isValid ? "✅ Valid" : "❌ " + row.validationReason
+                    }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="flex justify-end mt-6">
+            <u-button
+              @click="submitExcel"
+              color="teal"
+              class="px-6 py-2 text-white bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors"
+              :disabled="!validData.length"
+            >
+              Submit Excel Complaints
+            </u-button>
+          </div>
         </div>
         <div v-if="insertedComplaints.length" class="mt-6">
+          <!-- Inserted Complaints Section -->
           <p class="text-sm text-gray-600 mb-2 font-medium">
             Successfully Inserted Complaints:
           </p>
-          <UTable
-            :data="insertedComplaints"
-            :columns="excelColumns"
-            class="w-full"
-          />
+
+          <!-- Inserted Complaints Table -->
+          <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+            <u-table
+              :data="insertedComplaints"
+              :columns="excelColumns"
+              class="w-full"
+            />
+          </div>
         </div>
 
         <div v-if="skippedComplaints.length" class="mt-6">
+          <!-- Skipped Complaints Section -->
           <p class="text-sm text-gray-600 mb-2 font-medium">
             Skipped / Failed Complaints:
           </p>
-          <UTable
-            :data="skippedComplaints"
-            :columns="excelColumns"
-            class="w-full"
-          />
+
+          <!-- Skipped Complaints Table -->
+          <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+            <u-table
+              :data="skippedComplaints"
+              :columns="excelColumns"
+              class="w-full"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -231,11 +310,21 @@ const toast = useToast();
 const access_key = localStorage.getItem("access_token");
 
 const mode = ref<"form" | "excel">("form");
-const excelComplaints = ref<any[]>([]);
 const fileInput = ref<HTMLInputElement | null>(null);
 const insertedComplaints = ref<any[]>([]);
 const skippedComplaints = ref<any[]>([]);
-// console.log("excelcomplaint",excelComplaints)
+const uploadedData = ref([]);
+const validData = ref([]);
+const errorMessage = ref(null);
+const uploadedFileName = ref<string | null>(null);
+// Add these computed properties to calculate total, valid, and invalid counts
+const totalCount = computed(() => uploadedData.value.length);
+const validCount = computed(
+  () => uploadedData.value.filter((row) => row.isValid).length
+);
+const invalidCount = computed(
+  () => uploadedData.value.filter((row) => !row.isValid).length
+);
 
 // ---------------- Manual Form ----------------
 const form = ref({
@@ -275,13 +364,6 @@ const excelColumns: ColumnDef<any>[] = [
 const electricians = ref<{ label: string; value: number }[]>([]);
 
 onMounted(async () => {
-  // try {
-  // 	const res = await $fetch("/api/complaints/new-ref");
-  // 	form.value.refNo = res.refNo || `TEMP-${Date.now()}`;
-  // } catch {
-  // 	form.value.refNo = `TEMP-${Date.now()}`;
-  // }
-
   try {
     const res = await $fetch(
       "https://ayodhya.water.live/api/surveyNew.php?action=get_electrician",
@@ -315,8 +397,8 @@ function resetForm() {
     poleNo: "",
     address: "",
     electrician: null,
-	referenceBy: "",
-	complaintDate: "",
+    referenceBy: "",
+    complaintDate: "",
   };
   Object.keys(errors).forEach((key) => (errors[key] = null));
 }
@@ -374,7 +456,6 @@ function validate() {
 }
 
 async function handleSubmit() {
-//   console.log(validate());
   if (!validate()) return;
 
   const payload = {
@@ -419,69 +500,12 @@ async function handleSubmit() {
   }
 }
 
-// ---------------- Excel Upload ----------------
-// function handleFileUpload(e: Event) {
-// 	const file = (e.target as HTMLInputElement).files?.[0];
-// 	if (!file) return;
-
-// 	if (file.size > 5 * 1024 * 1024) {
-// 		toast.add({ title: "Error", description: "File exceeds 5MB limit.", color: "red" });
-// 		return;
-// 	}
-
-// 	const reader = new FileReader();
-// 	reader.onload = (evt) => {
-// 		const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-// 		const workbook = XLSX.read(data, { type: "array" });
-// 		const sheet = workbook.Sheets[workbook.SheetNames[0]];
-// 		const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
-
-// 		if (!rows.length) {
-// 			toast.add({ title: "Error", description: "Excel is empty.", color: "red" });
-// 			return;
-// 		}
-
-// 		// ✅ Expected columns
-// 		const expectedColumns = ["ref_no", "name", "mobile_no", "ward_no", "address", "electrician", "pole_no"];
-
-// 		const headers = rows[0].map((h) => h.toString().trim().toLowerCase());
-// 		const isValid = expectedColumns.every((col) => headers.includes(col));
-
-// 		if (!isValid) {
-// 			toast.add({
-// 				title: "Error",
-// 				description: `Invalid Excel format. Columns must include: ${expectedColumns.join(", ")}`,
-// 				color: "red",
-// 			});
-// 			return;
-// 		}
-
-// 		// Map rows (skip header)
-// 		const dataRows = rows.slice(1);
-// 		excelComplaints.value = dataRows.map((row) => ({
-// 			ref_no: row[headers.indexOf("ref_no")] || "",
-// 			name: row[headers.indexOf("name")] || "",
-// 			mobile_no: row[headers.indexOf("mobile_no")] || "",
-// 			ward_no: row[headers.indexOf("ward_no")] || "",
-// 			address: row[headers.indexOf("address")] || "",
-// 			electrician: row[headers.indexOf("electrician")] || null,
-// 			pole_no: row[headers.indexOf("pole_no")] || "",
-// 		}));
-
-// 		toast.add({
-// 			title: "Excel Loaded",
-// 			description: `${excelComplaints.value.length} complaints loaded.`,
-// 			color: "green",
-// 		});
-// 	};
-// 	reader.readAsArrayBuffer(file);
-// }
-
-function handleFileUpload(e: Event) {
-	console.log("e",e)
-  const file = (e.target as HTMLInputElement).files?.[0];
-  console.log("file",file)
+// Handle file upload
+const handleFileUpload = async (event) => {
+  const file = (event.target as HTMLInputElement).files?.[0];
   if (!file) return;
+
+  uploadedFileName.value = file.name; // ✅ Save file name
 
   if (file.size > 5 * 1024 * 1024) {
     toast.add({
@@ -492,125 +516,171 @@ function handleFileUpload(e: Event) {
     return;
   }
 
-  const reader = new FileReader();
+  if (file && file.name.endsWith(".xlsx")) {
+    try {
+      const data = await readExcelFile(file);
+      const validated = validateData(data);
+      uploadedData.value = validated; // full list including invalid rows
+      validData.value = validated.filter((r) => r.isValid); // only valid rows
+      errorMessage.value = null;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Error reading or validating the file";
+    }
+  } else {
+    errorMessage.value = "Please upload a valid Excel (.xlsx) file";
+  }
+};
 
-  reader.onload = (evt) => {
-    const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-    const workbook = XLSX.read(data, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
+// Read Excel file
+const readExcelFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const ab = e.target.result;
+      const wb = XLSX.read(ab, { type: "array" });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet);
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
 
-    if (!rows.length) {
-      toast.add({
-        title: "Error",
-        description: "Excel is empty.",
-        color: "red",
-      });
-      return;
+      if (!rows.length) {
+        toast.add({
+          title: "Error",
+          description: "Excel is empty.",
+          color: "red",
+        });
+        return;
+      }
+
+      // Expected columns
+      const expectedColumns = [
+        "ref_no",
+        "name",
+        "reference_by",
+        "mobile_no",
+        "ward_no",
+        "address",
+        "electrician",
+        "pole_no",
+        "complaint_at",
+      ];
+      const headers = rows[0].map((h) => h.toString().trim().toLowerCase());
+
+      const isValid = expectedColumns.every((col) => headers.includes(col));
+      if (!isValid) {
+        toast.add({
+          title: "Error",
+          description: `Invalid Excel format. Columns must include: ${expectedColumns.join(
+            ", "
+          )}`,
+          color: "red",
+        });
+        return;
+      }
+
+      resolve(data);
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+// Validate Data
+const validateData = (data) => {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
+  const mobileRegex = /^\d{10}$/; // 10 digits
+
+  return data.map((row) => {
+    let validationReason = "";
+    let formattedDate = row.complaint_at;
+
+    // Convert Excel numeric date to valid date string (if it's a number)
+    if (row.complaint_at && !dateRegex.test(row.complaint_at)) {
+      // Check if it's a number (Excel date format as serial number)
+      if (!isNaN(row.complaint_at)) {
+        formattedDate = XLSX.SSF.format("yyyy-mm-dd", row.complaint_at); // Converts serial number to date string
+      }
     }
 
-    // Expected columns
-    const expectedColumns = [
-      "ref_no",
-      "name",
-      "mobile_no",
-      "ward_no",
-      "address",
-      "electrician",
-      "pole_no",
-    ];
-    const headers = rows[0].map((h) => h.toString().trim().toLowerCase());
+    // Validate fields
+    const validMobile = row.mobile_no ? mobileRegex.test(row.mobile_no) : true;
+    const validElectrician = row.electrician
+      ? !isNaN(Number(row.electrician))
+      : true;
+    const validDate = row.complaint_at ? dateRegex.test(formattedDate) : true;
 
-    const isValid = expectedColumns.every((col) => headers.includes(col));
-    if (!isValid) {
-      toast.add({
-        title: "Error",
-        description: `Invalid Excel format. Columns must include: ${expectedColumns.join(
-          ", "
-        )}`,
-        color: "red",
-      });
-      return;
+    if (row.mobile_no && !validMobile) {
+      validationReason = "Invalid mobile number";
+    } else if (row.complaint_at && !validDate) {
+      validationReason = "Invalid date format";
+    } else if (row.electrician && !validElectrician) {
+      validationReason = "Electrician number should be numeric";
     }
 
-    // Process rows with validation
-    const dataRows = rows.slice(1);
-    excelComplaints.value = dataRows.map((row, index) => {
-      const mobile = row[headers.indexOf("mobile_no")]?.toString().trim() || "";
-      const mobilePattern = /^[6-9]\d{9}$/;
+    // Set final validity
+    const isValid = !validationReason;
+    const rowStatus = validationReason || "Valid";
 
-      return {
-        ref_no: row[headers.indexOf("ref_no")] || "",
-        name: row[headers.indexOf("name")] || "",
-        mobile_no: mobile,
-        ward_no: row[headers.indexOf("ward_no")] || "",
-        address: row[headers.indexOf("address")] || "",
-        electrician: row[headers.indexOf("electrician")] || null,
-        pole_no: row[headers.indexOf("pole_no")] || "",
-        status: mobilePattern.test(mobile) ? "Valid" : "Invalid",
-        error_message: mobilePattern.test(mobile)
-          ? ""
-          : "Invalid mobile number",
-      };
-    });
+    return {
+      ...row,
+      complaint_at: formattedDate,
+      isValid,
+      validationReason: rowStatus,
+    };
+  });
+};
 
-    const invalidCount = excelComplaints.value.filter(
-      (r) => r.status === "Invalid"
-    ).length;
-
-    if (invalidCount > 0) {
-      toast.add({
-        title: "Validation Error",
-        description: `${invalidCount} row(s) have invalid mobile numbers.`,
-        color: "red",
-      });
-    } else {
-      toast.add({
-        title: "Excel Loaded",
-        description: `${excelComplaints.value.length} complaints loaded.`,
-        color: "green",
-      });
-    }
-  };
-
-  reader.readAsArrayBuffer(file);
-}
-
-async function submitExcel() {
-  if (!excelComplaints.value.length) {
-    toast.add({
-      title: "Error",
-      description: "No complaints loaded from Excel.",
-      color: "red",
-    });
+// Submit Data to API
+const submitExcel = async () => {
+  if (validData.value.length === 0) {
+    alert("No data to submit.");
     return;
   }
 
-  const payload = { accesskey: access_key, complaints: excelComplaints.value };
-  console.log("import_payload",payload)
+  const payload = {
+    accesskey: access_key,
+    complaints: validData.value.map((row) => ({
+      ref_no: row.ref_no,
+      name: row.name,
+      reference_by: row.reference_by,
+      mobile_no: row.mobile_no,
+      ward_no: row.ward_no,
+      address: row.address,
+      electrician: row.electrician,
+      pole_no: row.pole_no,
+      complaint_at: row.complaint_at,
+      // Including validation info
+      is_valid: row.isValid,
+      validation_reason: row.validationReason,
+    })),
+  };
 
   try {
-    const res = await $fetch(
+    const response = await fetch(
       "https://ayodhya.water.live/api/surveyNew.php?action=ImportComplaint",
       {
         method: "POST",
-        body: payload,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       }
     );
+    const result = await response.json();
+    // alert(result.message || "Data submitted successfully!");
 
     // Split inserted and skipped
-    insertedComplaints.value = res.inserted || [];
-    skippedComplaints.value = res.skipped || [];
+    insertedComplaints.value = result.inserted || [];
+    skippedComplaints.value = result.skipped || [];
 
     toast.add({
       title: "Process Completed",
       description: `${insertedComplaints.value.length} inserted, ${skippedComplaints.value.length} skipped`,
       color: "green",
     });
-
-    // Clear Excel preview
-    excelComplaints.value = [];
-  } catch (err) {
+    //     // Clear Excel preview
+    validData.value = [];
+  } catch (error) {
     console.error(err);
     toast.add({
       title: "Error",
@@ -618,17 +688,20 @@ async function submitExcel() {
       color: "red",
     });
   }
-}
+};
+
 const downloadSample = () => {
   // Headers
   const headers = [
     "ref_no",
     "name",
+    "reference_by",
     "mobile_no",
     "ward_no",
     "address",
     "electrician",
     "pole_no",
+    "complaint_at",
   ];
 
   // Sample data
@@ -636,39 +709,44 @@ const downloadSample = () => {
     [
       "REF001",
       "Name A",
+      "Reference Name A",
       "9876543210",
       "1",
       "123 Main Street",
-      "Electrician A",
+      1,
       "101",
+      "2025-11-06",
     ],
     [
       "REF002",
       "Name B",
+      "Reference Name B",
       "9123456789",
       "2",
       "456 Elm Street",
-      "Electrician B",
+      2,
       "102",
+      "2025-11-06",
     ],
     [
       "REF003",
       "Name C",
+      "Reference Name A",
       "9988776655",
       "3",
       "789 Oak Avenue",
-      "Electrician C",
+      3,
       "103",
+      "2025-11-06",
     ],
   ];
 
   // Combine headers and data
   const worksheetData = [headers, ...sampleData];
-
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sample");
-
   XLSX.writeFile(workbook, "sample_complaints.xlsx");
 };
+
 </script>
